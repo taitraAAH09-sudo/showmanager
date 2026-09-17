@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>展務資訊統整台 V29</title>
+<title>展務資訊統整台 V30</title>
 <style>
 :root{
   --ink:#14192B; --ink-2:#3A4157; --ink-3:#767E93;
@@ -595,7 +595,7 @@ body.mypage .sec:not(#s-me){display:none}
         <button class="btn sm signed-only" id="btn-me">切換帳號</button>
         <button class="btn sm signed-only" id="btn-exit">登出</button>
         <button class="loginhint" id="login-hint">點我登入 → 密碼 0000 → 選「常設後台」 ➜</button>
-        <span class="ver" id="ver" title="版本">V29</span>
+        <span class="ver" id="ver" title="版本">V30</span>
       </div>
     </div>
 
@@ -812,7 +812,7 @@ body.mypage .sec:not(#s-me){display:none}
 (function(){
 "use strict";
 
-var PASSWORD="0000", VERSION="V29", STORE_KEY="taitraExpoDesk.v29", OLD_KEY27="taitraExpoDesk.v28", OLD_KEY26="taitraExpoDesk.v27", OLD_KEY25="taitraExpoDesk.v26", OLD_KEY24="taitraExpoDesk.v25", OLD_KEY23="taitraExpoDesk.v24", OLD_KEY22="taitraExpoDesk.v23", OLD_KEY21="taitraExpoDesk.v22", OLD_KEY20="taitraExpoDesk.v21", OLD_KEY19="taitraExpoDesk.v20", OLD_KEY18="taitraExpoDesk.v19", OLD_KEY17="taitraExpoDesk.v18", OLD_KEY16="taitraExpoDesk.v17", OLD_KEY15="taitraExpoDesk.v16", OLD_KEY14="taitraExpoDesk.v15", OLD_KEY13="taitraExpoDesk.v14", OLD_KEY12="taitraExpoDesk.v13", OLD_KEY11="taitraExpoDesk.v12", OLD_KEY10="taitraExpoDesk.v11", OLD_KEY9="taitraExpoDesk.v10", OLD_KEY8="taitraExpoDesk.v9", OLD_KEY7="taitraExpoDesk.v8", OLD_KEY6="taitraExpoDesk.v7", OLD_KEY5="taitraExpoDesk.v6", OLD_KEY4="taitraExpoDesk.v5", OLD_KEY3="taitraExpoDesk.v4", OLD_KEY2="taitraExpoDesk.v3", OLD_KEY="taitraExpoDesk.v2";
+var PASSWORD="0000", VERSION="V30", STORE_KEY="taitraExpoDesk.v30", OLD_KEY28="taitraExpoDesk.v29", OLD_KEY27="taitraExpoDesk.v28", OLD_KEY26="taitraExpoDesk.v27", OLD_KEY25="taitraExpoDesk.v26", OLD_KEY24="taitraExpoDesk.v25", OLD_KEY23="taitraExpoDesk.v24", OLD_KEY22="taitraExpoDesk.v23", OLD_KEY21="taitraExpoDesk.v22", OLD_KEY20="taitraExpoDesk.v21", OLD_KEY19="taitraExpoDesk.v20", OLD_KEY18="taitraExpoDesk.v19", OLD_KEY17="taitraExpoDesk.v18", OLD_KEY16="taitraExpoDesk.v17", OLD_KEY15="taitraExpoDesk.v16", OLD_KEY14="taitraExpoDesk.v15", OLD_KEY13="taitraExpoDesk.v14", OLD_KEY12="taitraExpoDesk.v13", OLD_KEY11="taitraExpoDesk.v12", OLD_KEY10="taitraExpoDesk.v11", OLD_KEY9="taitraExpoDesk.v10", OLD_KEY8="taitraExpoDesk.v9", OLD_KEY7="taitraExpoDesk.v8", OLD_KEY6="taitraExpoDesk.v7", OLD_KEY5="taitraExpoDesk.v6", OLD_KEY4="taitraExpoDesk.v5", OLD_KEY3="taitraExpoDesk.v4", OLD_KEY2="taitraExpoDesk.v3", OLD_KEY="taitraExpoDesk.v2";
 var TRASH_DAYS=30;
 
 /* ---------- 雲端同步（整份展務資料） ----------
@@ -1140,6 +1140,10 @@ var state=null;
 (function init(){
   var raw=loadRaw(STORE_KEY);
   if(raw){ try{ state=JSON.parse(raw); }catch(e){} }
+  if(!state){
+    var v29=loadRaw(OLD_KEY28);
+    if(v29){ try{ state=JSON.parse(v29); }catch(e){} }
+  }
   if(!state){
     var v28=loadRaw(OLD_KEY27);
     if(v28){ try{ state=JSON.parse(v28); }catch(e){} }
@@ -1563,7 +1567,8 @@ function logout(quiet){
   setEdit(false);
 }
 $("#btn-roster").addEventListener("click",function(){
-  document.body.classList.remove("mypage");
+  bFlushEdit(); boardId=null; bSel=null;
+  document.body.classList.remove("mypage","boardpage");
   document.body.classList.add("rosterpage");
   renderRoster();
   window.scrollTo({top:0,behavior:"smooth"});
@@ -1626,7 +1631,8 @@ $("#rs-copyorg").addEventListener("click",function(){
 $("#login-hint").addEventListener("click",openLogin);
 $("#btn-mypage").addEventListener("click",function(){
   if(!session) return;
-  document.body.classList.remove("rosterpage");
+  bFlushEdit(); boardId=null; bSel=null;
+  document.body.classList.remove("rosterpage","boardpage");
   document.body.classList.add("mypage");
   renderMyPage();
   window.scrollTo({top:0,behavior:"smooth"});
@@ -2532,7 +2538,7 @@ function renderDsRail(secs){
   secs.forEach(function(sec,si){
     var on=dsOpenSec===sec.id, fs=dsVisFiles(sec);
     h+='<button class="dsr'+(on?" on":"")+'" data-dssec="'+esc(sec.id)+'" style="--c:'+DS_COLORS[si%DS_COLORS.length]+'">'
-      +'<b>'+esc(dsSecTitle(sec,si))+'</b><i>'+fs.length+' 份</i></button>';
+      +'<b>'+esc(dsSecTitle(sec,si))+'</b><i>'+fs.length+' 份'+(on?'　點一下收起':'')+'</i></button>';
     if(on&&fs.length){
       h+='<div class="dsrfiles">'+fs.map(function(f){
         return '<button class="dsrf" data-dsjump="'+esc(f.id)+'"><span class="n">'+esc(f.num||"")+'</span>'
@@ -3267,6 +3273,12 @@ document.addEventListener("click",function(e){
     return;
   }
   if(t.dataset.dssec){
+    if(dsOpenSec===t.dataset.dssec){
+      dsOpenSec=null;
+      renderDossier();
+      $("#rail").classList.remove("open");
+      return;
+    }
     dsOpenSec=t.dataset.dssec;
     renderDossier();
     dsLoadSection(dsOpenSec);
