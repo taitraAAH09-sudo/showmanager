@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>展務資訊統整台 V26</title>
+<title>展務資訊統整台 V28</title>
 <style>
 :root{
   --ink:#14192B; --ink-2:#3A4157; --ink-3:#767E93;
@@ -76,6 +76,10 @@ a{color:var(--accent)}
 .loginhint:hover{background:#FBE0D3}
 body.signed .loginhint{display:none}
 @media (max-width:880px){.loginhint{display:none}}
+.cloudpill{font-size:11.5px;color:var(--ink-3);border:1px solid var(--line);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.cloudpill.ok{color:var(--up);border-color:#BFE0D8;background:#EDF7F4}
+.cloudpill.bad{color:var(--down);border-color:#EBC7C0;background:#FBEFEC}
+@media (max-width:880px){.cloudpill{display:none}}
 .modepill{font-size:12px;color:var(--ink-3);border:1px dashed var(--line-2);border-radius:999px;padding:4px 11px}
 .modepill.edit{color:var(--accent);border-color:var(--accent);border-style:solid;background:var(--accent-soft)}
 
@@ -551,11 +555,12 @@ body.mypage .sec:not(#s-me){display:none}
         <div class="sub" id="h-sub">—</div>
       </div>
       <div class="right">
+        <span class="cloudpill" id="cloudpill">☁️ 連線中…</span>
         <span class="modepill" id="modepill">觀看模式</span>
         <button class="btn sm signed-only" id="btn-me">切換帳號</button>
         <button class="btn sm signed-only" id="btn-exit">登出</button>
         <button class="loginhint" id="login-hint">連點我 5 次 → 密碼 0000 → 選「常設後台」 ➜</button>
-        <span class="ver" id="ver" title="版本">V26</span>
+        <span class="ver" id="ver" title="版本">V28</span>
       </div>
     </div>
 
@@ -773,55 +778,202 @@ body.mypage .sec:not(#s-me){display:none}
 (function(){
 "use strict";
 
-var PASSWORD="0000", VERSION="V26", STORE_KEY="taitraExpoDesk.v26", OLD_KEY24="taitraExpoDesk.v25", OLD_KEY23="taitraExpoDesk.v24", OLD_KEY22="taitraExpoDesk.v23", OLD_KEY21="taitraExpoDesk.v22", OLD_KEY20="taitraExpoDesk.v21", OLD_KEY19="taitraExpoDesk.v20", OLD_KEY18="taitraExpoDesk.v19", OLD_KEY17="taitraExpoDesk.v18", OLD_KEY16="taitraExpoDesk.v17", OLD_KEY15="taitraExpoDesk.v16", OLD_KEY14="taitraExpoDesk.v15", OLD_KEY13="taitraExpoDesk.v14", OLD_KEY12="taitraExpoDesk.v13", OLD_KEY11="taitraExpoDesk.v12", OLD_KEY10="taitraExpoDesk.v11", OLD_KEY9="taitraExpoDesk.v10", OLD_KEY8="taitraExpoDesk.v9", OLD_KEY7="taitraExpoDesk.v8", OLD_KEY6="taitraExpoDesk.v7", OLD_KEY5="taitraExpoDesk.v6", OLD_KEY4="taitraExpoDesk.v5", OLD_KEY3="taitraExpoDesk.v4", OLD_KEY2="taitraExpoDesk.v3", OLD_KEY="taitraExpoDesk.v2";
+var PASSWORD="0000", VERSION="V28", STORE_KEY="taitraExpoDesk.v28", OLD_KEY26="taitraExpoDesk.v27", OLD_KEY25="taitraExpoDesk.v26", OLD_KEY24="taitraExpoDesk.v25", OLD_KEY23="taitraExpoDesk.v24", OLD_KEY22="taitraExpoDesk.v23", OLD_KEY21="taitraExpoDesk.v22", OLD_KEY20="taitraExpoDesk.v21", OLD_KEY19="taitraExpoDesk.v20", OLD_KEY18="taitraExpoDesk.v19", OLD_KEY17="taitraExpoDesk.v18", OLD_KEY16="taitraExpoDesk.v17", OLD_KEY15="taitraExpoDesk.v16", OLD_KEY14="taitraExpoDesk.v15", OLD_KEY13="taitraExpoDesk.v14", OLD_KEY12="taitraExpoDesk.v13", OLD_KEY11="taitraExpoDesk.v12", OLD_KEY10="taitraExpoDesk.v11", OLD_KEY9="taitraExpoDesk.v10", OLD_KEY8="taitraExpoDesk.v9", OLD_KEY7="taitraExpoDesk.v8", OLD_KEY6="taitraExpoDesk.v7", OLD_KEY5="taitraExpoDesk.v6", OLD_KEY4="taitraExpoDesk.v5", OLD_KEY3="taitraExpoDesk.v4", OLD_KEY2="taitraExpoDesk.v3", OLD_KEY="taitraExpoDesk.v2";
 var TRASH_DAYS=30;
 
-/* ---------- 我的頁面雲端同步（選用） ----------
-   把下面填成你自己在 Firebase 主控台建立的新專案設定（建議跟其他工具分開，各自獨立配額）：
-   https://console.firebase.google.com → 新增專案 → 建立 Realtime Database（測試模式即可）→ 專案設定 → 一般 → 你的應用程式 SDK 設定
-   沒填的話這個功能會自動關閉，其餘功能完全不受影響，資料照樣存在本機瀏覽器裡。 */
+/* ---------- 雲端同步（整份展務資料） ----------
+   Firebase 專案 showmanager：Realtime Database + 匿名登入。
+   規則：expoDesk 底下 auth != null 才可讀寫。 */
 var firebaseConfig={
-  apiKey:"YOUR_API_KEY",
-  authDomain:"YOUR_PROJECT.firebaseapp.com",
-  databaseURL:"https://YOUR_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:"YOUR_PROJECT"
+  apiKey:"AIzaSyA_nWJMaLgJARZLtq-uj9oJipCJFiljNqA",
+  authDomain:"showmanager-e0b16.firebaseapp.com",
+  databaseURL:"https://showmanager-e0b16-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"showmanager-e0b16",
+  storageBucket:"showmanager-e0b16.firebasestorage.app",
+  messagingSenderId:"904620095452",
+  appId:"1:904620095452:web:6b82904e0dbfc3cfbec119"
 };
-var cloudDb=null, cloudState="off"; // off | ready | syncing | error
-(function initCloud(){
-  if(!firebaseConfig.apiKey||firebaseConfig.apiKey==="YOUR_API_KEY") return;
-  try{
-    if(typeof firebase==="undefined") return;
-    firebase.initializeApp(firebaseConfig);
-    cloudDb=firebase.database();
-    cloudState="ready";
-  }catch(e){ cloudDb=null; cloudState="error"; }
-})();
-function cloudSafeKey(name){ return String(name||"").replace(/[.#$\[\]\/]/g,"_")||"_"; }
+var CLOUD_PATH="expoDesk/main", BLOB_PATH="expoDesk/blobs", BLOB_CHUNK=200000;
+var blobCache={}, blobLoading={}, blobQueue=[], blobBusy=false;
+function isBlobRef(v){ return typeof v==="string"&&v.indexOf("blob:")===0; }
+function blobIdOf(v){ return isBlobRef(v)?v.slice(5):""; }
+function blobPut(dataUrl,meta,encKey){
+  return new Promise(function(res,rej){
+    if(!cloudDb){ rej(new Error("雲端還沒連上")); return; }
+    var id=uid()+uid();
+    var payload=encKey?encStr(dataUrl,encKey):dataUrl;
+    var chunks={},i=0,n=0;
+    while(i<payload.length){ chunks["c"+String(n).padStart(4,"0")]=payload.slice(i,i+BLOB_CHUNK); i+=BLOB_CHUNK; n++; }
+    cloudDb.ref(BLOB_PATH+"/"+id).set({
+      name:(meta&&meta.name)||"",mime:(meta&&meta.mime)||"",size:(meta&&meta.size)||dataUrl.length,
+      enc:encKey?1:0,t:Date.now(),chunks:chunks
+    }).then(function(){ blobCache[id]=dataUrl; res("blob:"+id); }).catch(rej);
+  });
+}
+function blobFetch(ref,encKey,cb){
+  var id=blobIdOf(ref); if(!id) return;
+  if(blobCache[id]){ if(cb) cb(blobCache[id]); return; }
+  if(blobLoading[id]) return;
+  if(!cloudDb){ return; }
+  blobLoading[id]=true;
+  cloudDb.ref(BLOB_PATH+"/"+id).once("value").then(function(snap){
+    var v=snap.val();
+    blobLoading[id]=false;
+    if(!v||!v.chunks) return;
+    var txt=Object.keys(v.chunks).sort().map(function(k){ return v.chunks[k]; }).join("");
+    if(v.enc){ txt=encKey?decStr(txt,encKey):null; }
+    if(!txt) return;
+    blobCache[id]=txt;
+    if(cb) cb(txt);
+    blobRepaint();
+  }).catch(function(){ blobLoading[id]=false; });
+}
+var blobRepaintTimer=null;
+function blobRepaint(){
+  clearTimeout(blobRepaintTimer);
+  blobRepaintTimer=setTimeout(function(){
+    if(document.body.classList.contains("boardpage")||document.body.classList.contains("mypage")) renderBCanvas();
+    renderShots(); renderMap();
+  },120);
+}
+/* 畫面要用的實際圖檔：還沒抓到就先回空字串，抓到後自動重畫 */
+function srcOf(v,priv){
+  if(!v) return "";
+  if(!isBlobRef(v)) return v;
+  var id=blobIdOf(v);
+  if(blobCache[id]) return blobCache[id];
+  blobFetch(v,priv?vaultKey():null);
+  return "";
+}
+/* 把還留在資料裡的大圖大檔搬到獨立節點（背景慢慢做） */
+function blobQueuePush(fn){ blobQueue.push(fn); blobRun(); }
+function blobRun(){
+  if(blobBusy||!blobQueue.length||!cloudDb) return;
+  blobBusy=true;
+  var fn=blobQueue.shift();
+  Promise.resolve().then(fn).catch(function(){}).then(function(){
+    blobBusy=false;
+    setTimeout(blobRun,60);
+  });
+}
+function blobMigrate(){
+  if(!cloudDb) return;
+  var s2=state,jobs=[];
+  function big(v){ return typeof v==="string"&&v.indexOf("data:")===0&&v.length>20000; }
+  Object.keys(s2.shows||{}).forEach(function(k){
+    var sh=s2.shows[k]; if(!sh) return;
+    if(big(sh.map&&sh.map.img)) jobs.push(function(){
+      var d=sh.map.img;
+      return blobPut(d,{name:"map",mime:"image/jpeg",size:d.length}).then(function(ref){ sh.map.img=ref; save(); });
+    });
+    (sh.prog||[]).forEach(function(r){
+      (r.shots||[]).forEach(function(x){
+        if(big(x.src)) jobs.push(function(){
+          var d=x.src;
+          return blobPut(d,{name:"shot",mime:"image/jpeg",size:d.length}).then(function(ref){ x.src=ref; save(); });
+        });
+      });
+      (r.board||[]).forEach(function(b){
+        if(b.type==="img"&&big(b.src)) jobs.push(function(){
+          var d=b.src;
+          return blobPut(d,{name:"board",mime:"image/jpeg",size:d.length}).then(function(ref){ b.src=ref; save(); });
+        });
+        if(b.type==="file"&&big(b.data)) jobs.push(function(){
+          var d=b.data;
+          return blobPut(d,{name:b.name,mime:b.mime,size:b.size}).then(function(ref){ b.data=ref; save(); });
+        });
+      });
+    });
+  });
+  if(jobs.length){
+    toast("正在把 "+jobs.length+" 個檔案搬到雲端檔案區…");
+    jobs.forEach(blobQueuePush);
+  }
+}
+var cloudDb=null, cloudState="off", cloudRef=null, cloudT=0, cloudTimer=null, cloudApplying=false, cloudSeen="";
+var CLIENT_ID=Math.random().toString(36).slice(2,10);
+function cloudOn(){ return !!(firebaseConfig.apiKey&&firebaseConfig.apiKey.indexOf("YOUR_")<0); }
 function cloudStatusText(){
-  if(!firebaseConfig.apiKey||firebaseConfig.apiKey==="YOUR_API_KEY") return "☁️ 尚未設定雲端同步，目前只存在這台電腦裡";
-  if(cloudState==="error") return "☁️ 雲端同步暫時連不上，先存在這台電腦裡";
+  if(!cloudOn()) return "☁️ 尚未設定雲端同步，目前只存在這台電腦裡";
+  if(cloudState==="error") return "☁️ 雲端連不上，暫時只存在這台電腦（回復連線會自動補上）";
   if(cloudState==="syncing") return "☁️ 同步中…";
-  return "☁️ 已自動同步雲端";
+  if(cloudState==="ready") return "☁️ 已同步（"+(cloudT?fmtTsFull(cloudT):stampNow())+"）";
+  return "☁️ 連線中…";
 }
-function cloudPushVault(name){
-  if(!cloudDb||!name) return;
-  cloudState="syncing";
-  cloudDb.ref("vault/"+cloudSafeKey(name)).set({enc:state.vault[name],t:(state.vaultMeta[name]&&state.vaultMeta[name].t)||Date.now()})
-    .then(function(){ cloudState="ready"; if(document.body.classList.contains("mypage")){ var el=$("#mv-cloud"); if(el) el.textContent=cloudStatusText(); } })
-    .catch(function(){ cloudState="error"; if(document.body.classList.contains("mypage")){ var el=$("#mv-cloud"); if(el) el.textContent=cloudStatusText(); } });
+function cloudPill(){
+  var el=$("#cloudpill");
+  if(el){
+    el.textContent=cloudStatusText();
+    el.className="cloudpill"+(cloudState==="error"?" bad":(cloudState==="ready"?" ok":""));
+  }
+  var mv=$("#mv-cloud"); if(mv) mv.textContent=cloudStatusText();
 }
-function cloudPullVault(name){
-  if(!cloudDb||!name) return;
-  cloudDb.ref("vault/"+cloudSafeKey(name)).once("value").then(function(snap){
-    var v=snap.val(); if(!v||!v.enc) return;
-    var localT=(state.vaultMeta[name]&&state.vaultMeta[name].t)||0;
-    if(v.t<=localT) return;
-    state.vault[name]=v.enc; state.vaultMeta[name]={t:v.t}; save();
-    if(session&&session.name===name){
-      vaultLoad();
-      if(document.body.classList.contains("mypage")) renderMyPage();
+function initCloud(){
+  if(!cloudOn()||typeof firebase==="undefined") return;
+  try{
+    var app;
+    try{ app=firebase.app(); }catch(e){ app=firebase.initializeApp(firebaseConfig); }
+    cloudDb=app.database();
+    cloudState="connecting"; cloudPill();
+    var auth=app.auth&&app.auth();
+    var go=function(){
+      cloudRef=cloudDb.ref(CLOUD_PATH);
+      cloudRef.on("value",function(snap){
+        var v=snap.val();
+        if(!v||!v.data){
+          cloudState="ready"; cloudPill();
+          cloudPush(true);
+          setTimeout(blobMigrate,1500);
+          return;
+        }
+        if(v.by===CLIENT_ID){ cloudT=v.t||cloudT; cloudState="ready"; cloudPill(); if(!cloudPush.migrated){ cloudPush.migrated=true; setTimeout(blobMigrate,1500); } return; }
+        if(v.t&&v.t<=cloudT){ cloudState="ready"; cloudPill(); return; }
+        cloudApply(v);
+      },function(){ cloudState="error"; cloudPill(); });
+    };
+    if(auth&&auth.signInAnonymously&&!auth.currentUser){
+      auth.signInAnonymously().then(go).catch(function(){ cloudState="error"; cloudPill(); });
+    }else go();
+  }catch(e){ cloudState="error"; cloudPill(); }
+}
+function cloudApply(v){
+  var obj=null;
+  try{ obj=JSON.parse(v.data); }catch(e){ return; }
+  if(!obj||!obj.shows) return;
+  cloudApplying=true;
+  var keepActive=state&&state.active;
+  state=obj;
+  state.trash=state.trash||[]; state.log=state.log||[]; state.roster=state.roster||[];
+  state.accounts=state.accounts||{}; state.vault=state.vault||{};
+  if(keepActive&&state.shows[keepActive]) state.active=keepActive;
+  cloudT=v.t||Date.now();
+  try{ window.localStorage.setItem(STORE_KEY,JSON.stringify(state)); }catch(e){}
+  cloudApplying=false;
+  cloudState="ready"; cloudPill();
+  if(session){ vaultData=null; vaultLoad(); }
+  renderAll();
+  if(document.body.classList.contains("boardpage")) renderBoard();
+  if(document.body.classList.contains("mypage")) renderMyPage();
+  toast("已收到別人的更新（"+(v.byName||"其他人")+"）");
+}
+function cloudPush(immediate){
+  if(!cloudRef||cloudApplying) return;
+  clearTimeout(cloudTimer);
+  cloudTimer=setTimeout(function(){
+    if(!cloudRef) return;
+    var json=JSON.stringify(state);
+    if(json===cloudSeen) return;
+    if(json.length>8*1024*1024){
+      cloudState="error"; cloudPill();
+      if(!cloudPush.warned){ cloudPush.warned=true; alert("文字資料本身超過 8MB，這不太正常，先暫停同步。請按左欄「匯出備份檔」留一份給我看看。"); }
+      return;
     }
-  }).catch(function(){});
+    cloudState="syncing"; cloudPill();
+    var t=Date.now();
+    cloudRef.set({t:t,by:CLIENT_ID,byName:who(),data:json})
+      .then(function(){ cloudT=t; cloudSeen=json; cloudState="ready"; cloudPill(); })
+      .catch(function(){ cloudState="error"; cloudPill(); });
+  },immediate?200:900);
 }
 
 var SHOWS_2027=[
@@ -860,6 +1012,7 @@ function save(){
     }
   }
   var st=$("#stamp"); if(st) st.textContent="資料更新時間　"+state.updatedAt;
+  cloudPush();
 }
 function loadRaw(key){ try{ return window.localStorage.getItem(key); }catch(e){ return null; } }
 
@@ -953,6 +1106,14 @@ var state=null;
 (function init(){
   var raw=loadRaw(STORE_KEY);
   if(raw){ try{ state=JSON.parse(raw); }catch(e){} }
+  if(!state){
+    var v27=loadRaw(OLD_KEY26);
+    if(v27){ try{ state=JSON.parse(v27); }catch(e){} }
+  }
+  if(!state){
+    var v26=loadRaw(OLD_KEY25);
+    if(v26){ try{ state=JSON.parse(v26); }catch(e){} }
+  }
   if(!state){
     var v25=loadRaw(OLD_KEY24);
     if(v25){ try{ state=JSON.parse(v25); }catch(e){} }
@@ -1193,12 +1354,11 @@ function vaultKey(){ return session?(session.name+"::"+session.pin):""; }
 function vaultLoad(){
   if(!session) return null;
   var raw=state.vault[session.name];
-  if(!raw){ vaultData={p:{ext:"",mail:"",note:""},n:[]}; cloudPullVault(session.name); return vaultData; }
+  if(!raw){ vaultData={p:{ext:"",mail:"",note:""},n:[]}; return vaultData; }
   var txt=decStr(raw,vaultKey());
   try{ vaultData=txt?JSON.parse(txt):{p:{ext:"",mail:"",note:""},n:[]}; }
   catch(e){ vaultData={p:{ext:"",mail:"",note:""},n:[]}; }
   vaultData.p=vaultData.p||{ext:"",mail:"",note:""}; vaultData.n=vaultData.n||[];
-  cloudPullVault(session.name);
   return vaultData;
 }
 function vaultSave(){
@@ -1206,7 +1366,6 @@ function vaultSave(){
   state.vault[session.name]=encStr(JSON.stringify(vaultData),vaultKey());
   state.vaultMeta[session.name]={t:Date.now()};
   save();
-  cloudPushVault(session.name);
 }
 function logIt(act,itemId){
   var e={t:Date.now(),w:who(),a:act,show:state.active,item:itemId||""};
@@ -1691,13 +1850,17 @@ function renderMap(){
     +'<input type="file" id="map-file" accept="image/*" style="font-size:12px;width:190px">'
     +(m.img?'<button class="btn sm" id="map-clear">改回示意圖</button>':'')
     +'</span></h4>'
-    +(m.img?'<img class="mapimg" src="'+m.img+'" data-zoomsrc="'+m.img+'" alt="展館地圖">':defaultHallSvg())
+    +(m.img?(function(){ var ms=srcOf(m.img); return ms?'<img class="mapimg" src="'+ms+'" data-zoomsrc="'+ms+'" alt="展館地圖">':'<div class="dsload">地圖載入中…</div>'; })():defaultHallSvg())
     +'<div class="mapcap"><span class="ce" contenteditable="'+(editMode?"true":"false")+'" data-mapcap="1">'+esc(m.cap||(editMode?"":"—"))+'</span></div></div>';
   var fi=$("#map-file");
   if(fi) fi.addEventListener("change",function(e){
     var f=e.target.files[0]; if(!f) return;
     shrinkImage(f,function(src){
-      cur().map.img=src; logIt("更新展館地圖"); save(); renderMap(); renderLog(); toast("地圖已更新");
+      var sh4=cur();
+      sh4.map.img=src; logIt("更新展館地圖"); save(); renderMap(); renderLog(); toast("地圖已更新");
+      if(cloudDb) blobQueuePush(function(){
+        return blobPut(src,{name:"map.jpg",mime:"image/jpeg",size:src.length}).then(function(ref){ sh4.map.img=ref; save(); renderMap(); });
+      });
     });
     e.target.value="";
   });
@@ -1915,8 +2078,17 @@ function bAddFiles(list){
     var fr=new FileReader();
     fr.onload=function(){
       var y=bNextY();
-      if(String(f.type).indexOf("image")===0) c.items.push({id:uid(),type:"img",src:fr.result,x:28,y:y,w:340,h:230});
-      else c.items.push({id:uid(),type:"file",name:f.name,mime:f.type,size:f.size,data:fr.result,x:28,y:y,w:300,h:44});
+      var isImg=String(f.type).indexOf("image")===0;
+      var item=isImg?{id:uid(),type:"img",src:fr.result,x:28,y:y,w:340,h:230}
+                    :{id:uid(),type:"file",name:f.name,mime:f.type,size:f.size,data:fr.result,x:28,y:y,w:300,h:44};
+      c.items.push(item);
+      if(cloudDb){
+        var raw=isImg?item.src:item.data;
+        blobQueuePush(function(){
+          return blobPut(raw,{name:f.name,mime:f.type,size:f.size},c.priv?vaultKey():null)
+            .then(function(ref){ if(isImg) item.src=ref; else item.data=ref; bSave(); renderBCanvas(); });
+        });
+      }
       if(c.node) logIt("在「"+c.node.title+"」的工作區放了 "+f.name,c.node.id);
       next();
     };
@@ -1974,7 +2146,10 @@ function renderBCanvas(){
         +'<span class="bhandle"></span></div>';
     }else if(b.type==="img"){
       st+='height:'+(b.h||180)+'px;';
-      h+='<div class="bitem b-img'+(bSel===b.id?" sel":"")+'" data-bid="'+b.id+'" style="'+st+'"><img src="'+b.src+'" alt=""><span class="bhandle"></span></div>';
+      var isrc=srcOf(b.src,c.priv);
+      h+='<div class="bitem b-img'+(bSel===b.id?" sel":"")+'" data-bid="'+b.id+'" style="'+st+'">'
+        +(isrc?'<img src="'+isrc+'" alt="">':'<div class="dsload" style="height:100%">載入中…</div>')
+        +'<span class="bhandle"></span></div>';
     }else{
       st+='min-height:'+(b.h||44)+'px;';
       h+='<div class="bitem b-file'+(bSel===b.id?" sel":"")+'" data-bid="'+b.id+'" style="'+st+'">📎 <b>'+esc(b.name||"檔案")+'</b>'
@@ -2533,7 +2708,8 @@ function renderShots(){
   if(!all.length){ box.innerHTML=''; box.style.display="none"; return; }
   box.style.display="flex";
   box.innerHTML=all.slice(0,10).map(function(x){
-    return '<button class="shot" data-open="'+x.item.id+'"><img src="'+x.sh.src+'" alt="">'
+    var ssrc=srcOf(x.sh.src);
+    return '<button class="shot" data-open="'+x.item.id+'">'+(ssrc?'<img src="'+ssrc+'" alt="">':'<div class="dsload" style="height:112px">載入中…</div>')
       +'<div class="cap">'+esc(x.sh.cap||x.item.title)+'<span>'+esc(x.sh.cap?x.item.title+"　":"")+fmtTs(x.sh.t)+'　'+esc(x.sh.by||"")+'</span></div></button>';
   }).join("");
 }
@@ -2977,7 +3153,12 @@ document.addEventListener("paste",function(e){
       var im=new Image();
       im.onload=function(){
         var w=Math.min(420,im.width), h=Math.round(im.height*w/im.width);
-        bc2.items.push({id:uid(),type:"img",src:src,x:28,y:bNextY(),w:w,h:h});
+        var it3={id:uid(),type:"img",src:src,x:28,y:bNextY(),w:w,h:h};
+        bc2.items.push(it3);
+        if(cloudDb) blobQueuePush(function(){
+          return blobPut(src,{name:"screenshot.jpg",mime:"image/jpeg",size:src.length},bc2.priv?vaultKey():null)
+            .then(function(ref){ it3.src=ref; bSave(); renderBCanvas(); });
+        });
         if(bc2.node) logIt("在「"+bc2.node.title+"」的工作區貼上截圖",bc2.node.id);
         bSave(); renderBoardAll(); toast("截圖已貼上");
       };
@@ -3056,6 +3237,12 @@ document.addEventListener("click",function(e){
   }
   if(t.dataset.bopen){
     var bf=bFind(t.dataset.bopen);
+    if(bf&&isBlobRef(bf.data)){
+      var cc=bCtx();
+      var got=srcOf(bf.data,cc&&cc.priv);
+      if(!got){ toast("檔案載入中，稍等一下再點"); return; }
+      bf=Object.assign({},bf,{data:got});
+    }
     if(bf&&bf.data){
       try{
         var url=dataUrlToBlobUrl(bf.data),a=document.createElement("a");
@@ -3540,6 +3727,8 @@ window.addEventListener("scroll",function(){
 $("#ver").textContent=VERSION;
 renderAll();
 save();
+initCloud();
+cloudPill();
 dsInit();
 })();
 </script>
